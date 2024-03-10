@@ -28,28 +28,34 @@ def parse_input(user_input):
 
 
 @input_error
-def add_contact(args, address_book):
-    name, phone = args
-    address_book.add_record(Record(name, phone))
-    return "Contact added."
+def add_contact(args, book: AddressBook):
+    name, phone, *_ = args
+    record = book.find(name)
+    message = "Contact updated."
+    if record is None:
+        record = Record(name)
+        book.add_record(record)
+        message = "Contact added."
+    if phone:
+        record.add_phone(phone)
+    return message
 
 
 @input_error
-def show_phone(args, address_book):
+def show_phones(args, address_book):
     name = args[0]
-    record = address_book.get(name)
+    record = address_book.find(name)
     if record:
-        return record
+        return ', '.join(p.value for p in record.phones)
     return 'Not found'
 
 
 @input_error
 def change_phone(args, address_book):
-    name, phone = args
-    record: Record = address_book.get(name)
+    name, old_phone, phone = args
+    record: Record = address_book.find(name)
     if record:
-        record.phones.clear()
-        record.phones = [Phone(phone)]
+        record.edit_phone(old_phone, phone)
         return "Phone changed"
     return "Not found"
 
@@ -65,7 +71,7 @@ def all_phones(args, address_book: AddressBook):
 @input_error
 def add_birthday(args, address_book):
     name, birthday = args
-    record = address_book.get(name)
+    record = address_book.find(name)
     if record:
         record.add_birthday(birthday)
         return "Birthday was changed"
@@ -75,7 +81,7 @@ def add_birthday(args, address_book):
 @input_error
 def show_birthday(args, address_book):
     name = args[0]
-    record = address_book.get(name)
+    record = address_book.find(name)
     if record:
         return record.birthday
     return "Not found"
@@ -85,6 +91,8 @@ def show_birthday(args, address_book):
 def birthdays(args, address_book):
     birthdays_string = ""
     for record in address_book.values():
+        if record.birthday is None:
+            continue
         birthday = datetime(
             year=datetime.now().year,
             month=record.birthday.value.month,
@@ -111,7 +119,7 @@ def main():
         elif command == "add":
             print(add_contact(args, book))
         elif command == "phone":
-            print(show_phone(args, book))
+            print(show_phones(args, book))
         elif command == "change":
             print(change_phone(args, book))
         elif command == "all":
